@@ -1,0 +1,398 @@
+openapi: 3.1.0
+info:
+  title: DentOzone Clear Aligner API
+  version: 1.0.0
+  description: Persisted patient-owned aligner courses and tray progress.
+paths:
+  /patients/{patientId}/aligner-courses:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+    get:
+      operationId: listPatientAlignerCourses
+      summary: List aligner courses belonging to a patient
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Courses and their trays, ordered by course creation and tray sequence.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlignerCourse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createPatientAlignerCourse
+      summary: Start a Clear Aligner course linked to the patient's orthodontic case
+      description: Owner or assigned dentist only. Case and patient must match; one course per case.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlignerCourseInput"
+      responses:
+        "201":
+          description: Created course.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignerCourse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /patients/{patientId}/aligner-courses/{courseId}:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      operationId: getPatientAlignerCourse
+      summary: Read a patient's aligner course and trays
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Course details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignerCourse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /patients/{patientId}/aligner-courses/{courseId}/trays:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    post:
+      operationId: createAlignerTray
+      summary: Add a uniquely sequenced tray to a course
+      description: Owner or assigned dentist only. An optional visit must belong to the same patient.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlignerTrayInput"
+      responses:
+        "201":
+          description: Created tray.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignerTray"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /patients/{patientId}/aligner-courses/{courseId}/trays/{trayId}:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      - name: trayId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    patch:
+      operationId: updateAlignerTray
+      summary: Update tray dates, status, wear notes, or linked visit
+      description: Owner or assigned dentist only. A supplied visit must belong to the same patient.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlignerTrayUpdate"
+      responses:
+        "200":
+          description: Updated tray.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignerTray"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+components:
+  parameters:
+    PatientId:
+      name: patientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    CalendarDate:
+      type: string
+      format: date
+    TrayStatus:
+      type: string
+      enum:
+        - planned
+        - delivered
+        - wearing
+        - completed
+        - paused
+    AlignerCourse:
+      type: object
+      required:
+        - id
+        - patientId
+        - caseId
+        - title
+        - createdByStaffId
+        - createdAt
+        - updatedAt
+        - isDemo
+        - trays
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        caseId:
+          type: integer
+        title:
+          type: string
+        createdByStaffId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        isDemo:
+          type: boolean
+        trays:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlignerTray"
+    AlignerTray:
+      type: object
+      required:
+        - id
+        - courseId
+        - sequence
+        - plannedDate
+        - deliveredDate
+        - status
+        - wearNotes
+        - visitId
+        - createdAt
+        - updatedAt
+        - isDemo
+      properties:
+        id:
+          type: integer
+        courseId:
+          type: integer
+        sequence:
+          type: integer
+          minimum: 1
+        plannedDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        deliveredDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        status:
+          $ref: "#/components/schemas/TrayStatus"
+        wearNotes:
+          type:
+            - string
+            - "null"
+        visitId:
+          type:
+            - integer
+            - "null"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        isDemo:
+          type: boolean
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    AlignerCourseInput:
+      type: object
+      additionalProperties: false
+      required:
+        - caseId
+        - title
+      properties:
+        caseId:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+    AlignerTrayUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        plannedDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        deliveredDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        status:
+          $ref: "#/components/schemas/TrayStatus"
+        wearNotes:
+          type:
+            - string
+            - "null"
+          maxLength: 4000
+        visitId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+    AlignerTrayInput:
+      type: object
+      additionalProperties: false
+      required:
+        - sequence
+      properties:
+        sequence:
+          type: integer
+          minimum: 1
+        plannedDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        deliveredDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        status:
+          $ref: "#/components/schemas/TrayStatus"
+        wearNotes:
+          type:
+            - string
+            - "null"
+          maxLength: 4000
+        visitId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+  responses:
+    BadRequest:
+      description: Invalid input or mismatched patient relationship.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Role or assigned-case ownership does not permit this action.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Patient, course, case, visit, or tray was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Patient is inactive or sequence/course constraint conflicts.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  securitySchemes:
+    staffSession:
+      type: http
+      scheme: bearer
+      bearerFormat: DentOzone staff session

@@ -1,0 +1,377 @@
+openapi: 3.1.0
+info:
+  title: DentOzone Laboratory Orders API fragment
+  version: 1.0.0
+paths:
+  /patients/{patientId}/laboratory-orders:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+    get:
+      operationId: listPatientLaboratoryOrders
+      summary: List laboratory orders for a patient
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Laboratory orders and their audit histories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LaboratoryOrder"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createPatientLaboratoryOrder
+      summary: Create a laboratory order
+      description: Owner and dentist roles only. isDemo is inherited from the patient.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaboratoryOrderInput"
+      responses:
+        "201":
+          description: Created order including its first audit event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaboratoryOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /laboratory-orders/{orderId}:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      operationId: getLaboratoryOrder
+      summary: Get a laboratory order with audit history
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Laboratory order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaboratoryOrder"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateLaboratoryOrder
+      summary: Update a laboratory order
+      description: Owner and dentist roles only; valid status transitions are enforced.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaboratoryOrderUpdate"
+      responses:
+        "200":
+          description: Updated order and appended audit history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaboratoryOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      operationId: cancelLaboratoryOrder
+      summary: Cancel a laboratory order without deleting its audit history
+      description: Owner and dentist roles only. Cancellation is retained as a terminal order state.
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Cancelled order and appended audit history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaboratoryOrder"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+components:
+  parameters:
+    PatientId:
+      name: patientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    LaboratoryCaseType:
+      type: string
+      enum:
+        - crown
+        - bridge
+        - denture
+        - implant
+        - orthodontic
+        - other
+    LaboratoryOrderStatus:
+      type: string
+      enum:
+        - submitted
+        - in_progress
+        - ready
+        - delivered
+        - cancelled
+    LaboratoryOrder:
+      type: object
+      required:
+        - id
+        - patientId
+        - visitId
+        - labName
+        - supplierId
+        - caseType
+        - dueDate
+        - status
+        - notes
+        - createdByStaffId
+        - updatedByStaffId
+        - createdAt
+        - updatedAt
+        - isDemo
+        - history
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        visitId:
+          type:
+            - integer
+            - "null"
+        labName:
+          type: string
+        supplierId:
+          type:
+            - integer
+            - "null"
+        caseType:
+          $ref: "#/components/schemas/LaboratoryCaseType"
+        dueDate:
+          type:
+            - string
+            - "null"
+          format: date
+        status:
+          $ref: "#/components/schemas/LaboratoryOrderStatus"
+        notes:
+          type:
+            - string
+            - "null"
+        createdByStaffId:
+          type: integer
+        updatedByStaffId:
+          type:
+            - integer
+            - "null"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        isDemo:
+          type: boolean
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/LaboratoryOrderAuditEvent"
+    LaboratoryOrderAuditEvent:
+      type: object
+      required:
+        - id
+        - orderId
+        - actorStaffId
+        - actorName
+        - action
+        - before
+        - after
+        - occurredAt
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        actorStaffId:
+          type: integer
+        actorName:
+          type: string
+        action:
+          type: string
+          enum:
+            - create
+            - update
+            - cancel
+        before:
+          type:
+            - object
+            - "null"
+          additionalProperties: true
+        after:
+          type: object
+          additionalProperties: true
+        occurredAt:
+          type: string
+          format: date-time
+    LaboratoryOrderInput:
+      type: object
+      additionalProperties: false
+      required:
+        - labName
+        - caseType
+      properties:
+        visitId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        labName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        supplierId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        caseType:
+          $ref: "#/components/schemas/LaboratoryCaseType"
+        dueDate:
+          type:
+            - string
+            - "null"
+          format: date
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 10000
+    LaboratoryOrderUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        visitId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        labName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        supplierId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        caseType:
+          $ref: "#/components/schemas/LaboratoryCaseType"
+        dueDate:
+          type:
+            - string
+            - "null"
+          format: date
+        status:
+          $ref: "#/components/schemas/LaboratoryOrderStatus"
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 10000
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+  responses:
+    BadRequest:
+      description: Invalid input or status transition
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: The staff role is not permitted
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Patient, visit, supplier, or order not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Visit ownership conflict, inactive patient, or invalid lifecycle operation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+  securitySchemes:
+    staffSession:
+      type: http
+      scheme: bearer
+      bearerFormat: DentOzone staff session

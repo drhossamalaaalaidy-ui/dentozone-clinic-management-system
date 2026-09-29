@@ -1,0 +1,358 @@
+openapi: 3.1.0
+info:
+  title: DentOzone Clinical Prescriptions
+  version: 1.0.0
+  description: >
+    Persisted clinic prescription records. This contract deliberately does not provide
+    e-prescribing, electronic transmission, or pharmacy integrations.
+servers:
+  - url: /api
+security:
+  - staffSession: []
+paths:
+  /patients/{patientId}/prescriptions:
+    parameters:
+      - name: patientId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      operationId: listPatientPrescriptions
+      summary: List prescriptions for one patient
+      description: >
+        Readable by owner, dentist, manager, and assistant. Reception and accountant roles are
+        denied. A prescription is listed only through its owning patient.
+      responses:
+        "200":
+          description: Patient prescriptions, including original data and amendments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Prescription"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+        - staffSession: []
+    post:
+      operationId: createPatientPrescription
+      summary: Issue a prescription
+      description: >
+        Owner and dentist only. The linked visit, when supplied, must belong to this patient. A
+        dentist is the prescribing author; a dentist user is automatically recorded as author. An
+        owner must select an active dentist using authorDentistStaffId. isDemo is inherited from the
+        patient and cannot be set by the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionInput"
+      responses:
+        "201":
+          description: Prescription issued and audit event recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Patient is inactive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - staffSession: []
+  /prescriptions/{prescriptionId}:
+    parameters:
+      - name: prescriptionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      operationId: getPrescription
+      summary: Read one prescription with its complete amendment history
+      description: Readable by owner, dentist, manager, and assistant only.
+      responses:
+        "200":
+          description: Prescription detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+        - staffSession: []
+  /prescriptions/{prescriptionId}/amendments:
+    parameters:
+      - name: prescriptionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    post:
+      operationId: amendPrescription
+      summary: Append a correction or void amendment
+      description: >
+        Owner and dentist only. The issued record is never edited or deleted. Corrections and voids
+        append an immutable amendment and audit event. A voided prescription cannot be amended
+        again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionAmendmentInput"
+      responses:
+        "201":
+          description: Updated effective view with preserved original and append-only amendments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: A void prescription cannot be amended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - staffSession: []
+components:
+  schemas:
+    PrescriptionFields:
+      type: object
+      required:
+        - medication
+        - dose
+        - route
+        - frequency
+        - duration
+        - instructions
+      properties:
+        medication:
+          type: string
+          minLength: 1
+          maxLength: 200
+        dose:
+          type: string
+          minLength: 1
+          maxLength: 120
+        route:
+          type: string
+          minLength: 1
+          maxLength: 80
+        frequency:
+          type: string
+          minLength: 1
+          maxLength: 120
+        duration:
+          type: string
+          minLength: 1
+          maxLength: 120
+        instructions:
+          type: string
+          maxLength: 2000
+    Prescription:
+      allOf:
+        - $ref: "#/components/schemas/PrescriptionFields"
+        - type: object
+          required:
+            - id
+            - patientId
+            - patientName
+            - authorDentistStaffId
+            - authorDentistName
+            - issuedDate
+            - original
+            - status
+            - isDemo
+            - amendments
+          properties:
+            id:
+              type: integer
+            patientId:
+              type: integer
+            patientName:
+              type: string
+            visitId:
+              type:
+                - integer
+                - "null"
+            authorDentistStaffId:
+              type: integer
+            authorDentistName:
+              type: string
+            createdByStaffId:
+              type: integer
+            issuedDate:
+              type: string
+              format: date
+            createdAt:
+              type: string
+              format: date-time
+            isDemo:
+              type: boolean
+              description: Inherited from the owning patient; never supplied by a caller.
+            original:
+              $ref: "#/components/schemas/PrescriptionFields"
+            status:
+              type: string
+              enum:
+                - issued
+                - corrected
+                - void
+            amendments:
+              type: array
+              items:
+                type: object
+                required:
+                  - id
+                  - amendmentType
+                  - reason
+                  - amendedByStaffId
+                  - amendedByName
+                  - createdAt
+                properties:
+                  id:
+                    type: integer
+                  amendmentType:
+                    type: string
+                    enum:
+                      - correction
+                      - void
+                  reason:
+                    type: string
+                  amendedByStaffId:
+                    type: integer
+                  amendedByName:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  replacement:
+                    oneOf:
+                      - $ref: "#/components/schemas/PrescriptionFields"
+                      - type: "null"
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    PrescriptionInput:
+      allOf:
+        - $ref: "#/components/schemas/PrescriptionFields"
+        - type: object
+          required:
+            - issuedDate
+          properties:
+            visitId:
+              type: integer
+              minimum: 1
+            authorDentistStaffId:
+              type: integer
+              minimum: 1
+              description: Required for owner-authored requests; must identify active dentist staff.
+            issuedDate:
+              type: string
+              format: date
+    PrescriptionAmendmentInput:
+      oneOf:
+        - type: object
+          required:
+            - amendmentType
+            - reason
+            - replacement
+          properties:
+            amendmentType:
+              const: correction
+            reason:
+              type: string
+              minLength: 3
+              maxLength: 1000
+            replacement:
+              $ref: "#/components/schemas/PrescriptionFields"
+        - type: object
+          required:
+            - amendmentType
+            - reason
+          properties:
+            amendmentType:
+              const: void
+            reason:
+              type: string
+              minLength: 3
+              maxLength: 1000
+  responses:
+    BadRequest:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Staff role is not permitted
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Patient, visit, or prescription was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  securitySchemes:
+    staffSession:
+      type: http
+      scheme: bearer
+      bearerFormat: DentOzone staff session

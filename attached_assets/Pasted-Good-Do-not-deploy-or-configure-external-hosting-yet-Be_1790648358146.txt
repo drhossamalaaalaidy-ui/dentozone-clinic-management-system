@@ -1,0 +1,87 @@
+Good. Do not deploy or configure external hosting yet.
+
+Before deployment, complete the application to a genuinely deployment-ready state.
+
+1. Implement the missing modules:
+- Laboratory Orders
+- Dedicated Clear Aligner workflow
+- Prescriptions
+- Marketing Campaign and Referral Reporting
+
+2. Improve clinical media handling:
+- Add dedicated Photos and X-rays sections inside the patient profile.
+- Support uploading, viewing, downloading, deleting, and organizing clinical images.
+- Keep them private and linked to the correct patient and visit.
+- Do not duplicate files unnecessarily if the existing private-document storage can be reused securely.
+
+3. Complete authenticated browser E2E testing:
+- Create a fictional staff/admin test account using the application's real authentication flow.
+- Log in through the actual UI.
+- Test navigation and real UI interactions for every major module.
+- Create/edit/search a fictional patient.
+- Create a clinical visit.
+- Update medical/dental history.
+- Use the odontogram.
+- Create and modify a treatment plan.
+- Create an appointment and verify conflict prevention.
+- Create an invoice and payment.
+- Test installments.
+- Add an expense.
+- Test suppliers and inventory.
+- Test orthodontic workflow.
+- Test clear aligner workflow.
+- Upload/view/delete a fictional document, photo and X-ray.
+- Create a prescription.
+- Create a laboratory order.
+- Test reminders.
+- Test reports.
+- Test permissions with different staff roles.
+- Test logout and login again.
+- Test browser refresh.
+- Test persistence after application restart/reconnect.
+
+4. Test Arabic and English, including RTL/LTR, on mobile-sized screens.
+
+5. Fix every error discovered during these tests rather than only reporting it.
+
+6. Add validation and safe error handling wherever missing.
+
+7. Review financial workflows carefully:
+- invoices
+- payments
+- installments
+- expenses
+- corrections/voids
+- audit logging
+
+If invoice/payment correction is still unavailable, implement a safe correction/void workflow with audit history rather than allowing destructive editing.
+
+8. Review security:
+- authentication
+- authorization
+- role permissions
+- CSRF protection
+- private file access
+- patient-data isolation
+- audit logs
+- input validation
+
+9. Do not use real patient data. Use fictional demo data only.
+
+10. Run the complete automated test suite after all changes.
+
+11. At the end, give me a deployment-readiness report with:
+- completed modules
+- remaining incomplete items
+- automated tests passed/failed
+- browser E2E tests passed/failed
+- security checks
+- database persistence checks
+- file-storage checks
+- authentication checks
+- exact external services still required
+- any known limitations
+
+Do not claim the application is deployment-ready unless the above has actually been tested successfully.
+Do not configure external hosting yet.
+Do not delete or reset existing application data or configuration.

@@ -1,0 +1,132 @@
+# Copy deploy/.env.example to deploy/.env and supply the required values.
+# Build/push APP_IMAGE once; this stack pulls/runs it without rebuilding.
+services:
+  app:
+    image: ${APP_IMAGE:?Set the already-built image name or digest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      SERVE_STATIC: "true"
+      AUTH_PROVIDER: oidc
+      STORAGE_PROVIDER: s3
+      DATABASE_URL: postgres://clinic:${APP_DB_PASSWORD:?Set APP_DB_PASSWORD}@postgres:5432/clinic
+      DENTOZONE_OWNER_EMAIL: ${DENTOZONE_OWNER_EMAIL:?Set the verified owner email}
+      OIDC_ISSUER_URL: https://${AUTH_DOMAIN:?Set AUTH_DOMAIN}/realms/dentozone
+      OIDC_CLIENT_ID: dentozone
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?Set OIDC_CLIENT_SECRET}
+      OIDC_REDIRECT_URI: https://${APP_DOMAIN:?Set APP_DOMAIN}/api/auth/callback
+      OIDC_SESSION_SECRET: ${OIDC_SESSION_SECRET:?Set OIDC_SESSION_SECRET}
+      COOKIE_SECURE: "true"
+      S3_ENDPOINT: https://${STORAGE_DOMAIN:?Set STORAGE_DOMAIN}
+      S3_BUCKET: dentozone
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks: [internal]
+
+  postgres:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clinic
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:?Set APP_DB_PASSWORD}
+      POSTGRES_DB: clinic
+    volumes: [clinic-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinic -d clinic"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [internal]
+
+  keycloak-db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD}
+      POSTGRES_DB: keycloak
+    volumes: [identity-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [internal]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2.5
+    restart: unless-stopped
+    command: ["start", "--http-enabled=true", "--proxy-headers=xforwarded"]
+    environment:
+      KC_HOSTNAME: https://${AUTH_DOMAIN:?Set AUTH_DOMAIN}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:?Set KEYCLOAK_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD}
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    networks: [internal]
+
+  minio:
+    image: minio/minio:RELEASE.2025-02-07T23-21-09Z
+    restart: unless-stopped
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+      MINIO_SERVER_URL: https://${STORAGE_DOMAIN:?Set STORAGE_DOMAIN}
+    volumes: [document-objects:/data]
+    networks: [internal]
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-02-08T19-14-21Z
+    restart: "no"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do sleep 2; done;
+        mc mb --ignore-existing local/dentozone;
+        mc anonymous set none local/dentozone;
+        printf '{"CORSRules":[{"AllowedOrigins":["https://%s"],"AllowedMethods":["PUT"],"AllowedHeaders":["*"],"MaxAgeSeconds":300}]}' "$$APP_DOMAIN" > /tmp/cors.json;
+        mc cors set local/dentozone /tmp/cors.json
+    depends_on: [minio]
+    networks: [internal]
+
+  caddy:
+    image: caddy:2.10.2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN}
+      AUTH_DOMAIN: ${AUTH_DOMAIN:?Set AUTH_DOMAIN}
+      STORAGE_DOMAIN: ${STORAGE_DOMAIN:?Set STORAGE_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [app, keycloak, minio]
+    networks: [internal]
+
+networks:
+  internal:
+
+volumes:
+  clinic-db:
+  identity-db:
+  document-objects:
+  caddy-data:
+  caddy-config:

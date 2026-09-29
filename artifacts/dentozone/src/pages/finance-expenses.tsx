@@ -1,0 +1,24 @@
+import { useState, type FormEvent } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useListExpenses,useCreateExpense,useUpdateExpense,useListSuppliers,type Expense } from '@workspace/api-client-react';
+import { Plus } from 'lucide-react';
+import { PageHeading } from '@/components/clinic-ui';
+import { DateText,Field,FinanceTabs,Input,Modal,QueryState } from '@/components/ledger-ui';
+import { useLocale } from '@/lib/locale';
+import { egp,invalidateFinance,money,toCents } from '@/lib/ledger';
+function cairoDay(instant:string):string {
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(instant));
+  const value=(type:string)=>parts.find(part=>part.type===type)?.value||'';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
+export default function FinanceExpenses(){
+  const {t,language}=useLocale();const qc=useQueryClient();const q=useListExpenses();const suppliers=useListSuppliers();const create=useCreateExpense();const update=useUpdateExpense();
+  const [editing,setEditing]=useState<Expense|null>(null);const [open,setOpen]=useState(false);const [category,setCategory]=useState('');const [amount,setAmount]=useState('');const [supplier,setSupplier]=useState('');const [date,setDate]=useState('');const [notes,setNotes]=useState('');const [validation,setValidation]=useState('');
+  function start(e?:Expense){setEditing(e||null);setCategory(e?.category||'');setAmount(e?egp(e.amountCents):'');setSupplier(e?.supplierId?String(e.supplierId):'');setDate(e?cairoDay(e.occurredAt):'');setNotes(e?.notes||'');setValidation('');create.reset();update.reset();setOpen(true)}
+  function close(){setOpen(false);setEditing(null);setCategory('');setAmount('');setSupplier('');setDate('');setNotes('');setValidation('')}
+  function submit(e:FormEvent){e.preventDefault();const cents=toCents(amount);if(cents===null||cents<1){setValidation(t('invalidAmount'));return}const data={category:category.trim(),amountCents:cents,supplierId:supplier?Number(supplier):null,notes:notes||null,...(date&&(!editing||date!==cairoDay(editing.occurredAt))?{occurredAt:`${date}T12:00:00.000Z`}:{})};
+    if(editing)update.mutate({expenseId:editing.id,data},{onSuccess:()=>{invalidateFinance(qc);close()}});else create.mutate({data},{onSuccess:()=>{invalidateFinance(qc);close()}})
+  }
+  return <main className="page"><PageHeading eyebrow={t('finance')} title={t('expenses')} subtitle={language==='ar'?'كل مصروف موثق، ويمكن تصحيحه.':'Every outgoing amount, accounted for and correctable.'} action={<button className="btn btn-primary" onClick={()=>start()} data-testid="button-new-expense"><Plus size={16}/>{t('newExpense')}</button>}/><FinanceTabs/><QueryState loading={q.isLoading} error={q.isError} empty={!q.data?.length} retry={()=>q.refetch()}/>{!!q.data?.length&&<div className="panel ledger-list">{q.data.map(e=><div className="ledger-row" key={e.id} data-testid={`row-expense-${e.id}`}><div><strong>{e.category}</strong><small><DateText value={e.occurredAt}/>{e.supplierName&&` · ${e.supplierName}`}</small>{e.notes&&<small>{e.notes}</small>}</div><div style={{textAlign:'end'}}><div className="ledger-money">{money(e.amountCents,language)}</div><button className="btn btn-outline" style={{marginTop:7,minHeight:30,padding:'4px 10px'}} onClick={()=>start(e)} data-testid={`button-edit-expense-${e.id}`}>{t('correction')}</button></div></div>)}</div>}
+  {open&&<Modal title={editing?t('correction'):t('newExpense')} onClose={close} onSubmit={submit} pending={create.isPending||update.isPending} error={validation||((create.error||update.error) instanceof Error?(create.error||update.error as Error).message:'')}><div className="form-grid"><Field label={t('category')}><Input value={category} onChange={setCategory} required testId="input-expense-category"/></Field><Field label={t('amount')}><Input value={amount} onChange={setAmount} required testId="input-expense-amount"/></Field></div><div className="form-grid"><Field label={t('supplier')}><select className="input" value={supplier} onChange={e=>setSupplier(e.target.value)} data-testid="select-expense-supplier"><option value="">—</option>{suppliers.data?.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></Field><Field label={t('date')}><Input value={date} onChange={setDate} type="date" testId="input-expense-date"/></Field></div>{suppliers.isError&&<p className="ledger-note" role="alert">{t('error')}</p>}<Field label={t('notes')}><Input value={notes} onChange={setNotes} testId="input-expense-notes"/></Field></Modal>}</main>
+}

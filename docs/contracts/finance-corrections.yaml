@@ -1,0 +1,356 @@
+openapi: 3.0.3
+info:
+  title: DentOzone Finance Corrections
+  version: 1.0.0
+  description: Audited void operations for existing finance records.
+x-authoritative-state:
+  table: finance_corrections
+  uniqueness: [entity_type, entity_id]
+  appendOnly: true
+  auditLogRole: explanatory-history-only
+  deployment:
+    schemaChange: additive
+    legacyVoidRows: >
+      Verify and migrate any existing void correction data before deploying this
+      authority change. Do not use mutable clinic_audit_log entries as runtime state.
+paths:
+  /finance/invoices/{invoiceId}/void:
+    post:
+      summary: Void an unpaid invoice when no active payments remain
+      description: >
+        Owner, manager, or accountant only. Requires a reason of 8-1000 characters. The invoice and
+        its line items remain untouched. An authoritative unique marker and immutable
+        before/after snapshot are stored in finance_corrections in the same transaction as
+        the clinic audit event. The audit log is explanatory history only and does not
+        determine void state. Voided invoices reject future payments and are omitted from
+        dashboard and finance report totals.
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceCorrectionInput"
+      responses:
+        "200":
+          description: Invoice DTO including append-only correction history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceCorrectionInvoice"
+        "400":
+          description: Invalid invoice id or reason
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role is not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already voided or invoice has active payments / nonzero paid balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: voidInvoice
+      security:
+        - staffSession: []
+  /finance/payments/{paymentId}/void:
+    post:
+      summary: Reverse a payment without deleting or editing it
+      description: >
+        Owner, manager, or accountant only. Locks the invoice row and reverses the exact payment
+        amount from invoice and associated installment balances in one transaction. The payment row
+        remains unchanged; the reason and immutable before/after payment, invoice, and installment
+        snapshots are stored in a dedicated finance_corrections row in the same transaction as
+        the clinic audit event. The dedicated row is authoritative; audit log edits cannot restore
+        a reversed payment. Repeated reversals conflict. Reversed payments are omitted from
+        dashboard and finance revenue reports and remain visible in invoice correction history.
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceCorrectionInput"
+      responses:
+        "200":
+          description: Invoice DTO including append-only correction history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceCorrectionInvoice"
+        "400":
+          description: Invalid payment id or reason
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role is not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already reversed or inconsistent balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: reversePayment
+      security:
+        - staffSession: []
+components:
+  schemas:
+    FinanceCorrectionHistory:
+      type: object
+      required:
+        - id
+        - entityType
+        - entityId
+        - action
+        - reason
+        - before
+        - after
+        - actorName
+        - createdAt
+      properties:
+        id:
+          type: integer
+        entityType:
+          type: string
+          enum:
+            - invoice
+            - payment
+        entityId:
+          type: integer
+        action:
+          type: string
+          enum:
+            - void
+        reason:
+          type: string
+        before:
+          type: object
+          additionalProperties: true
+        after:
+          type: object
+          additionalProperties: true
+        actorName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    FinanceCorrectionInput:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 1000
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    FinanceCorrectionInvoice:
+      type: object
+      required:
+        - id
+        - patientId
+        - patientName
+        - totalCents
+        - paidCents
+        - balanceCents
+        - status
+        - issuedAt
+        - dueDate
+        - notes
+        - items
+        - installments
+        - payments
+        - correctionHistory
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        patientName:
+          type: string
+        totalCents:
+          type: integer
+          minimum: 0
+        paidCents:
+          type: integer
+          minimum: 0
+        balanceCents:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum:
+            - unpaid
+            - partial
+            - paid
+        issuedAt:
+          type: string
+          format: date-time
+        dueDate:
+          type:
+            - string
+            - "null"
+          format: date
+        notes:
+          type:
+            - string
+            - "null"
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - description
+              - quantity
+              - unitPriceCents
+              - totalCents
+            properties:
+              id:
+                type: integer
+              description:
+                type: string
+              quantity:
+                type: integer
+              unitPriceCents:
+                type: integer
+              totalCents:
+                type: integer
+        installments:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - dueDate
+              - amountCents
+              - paidCents
+              - status
+            properties:
+              id:
+                type: integer
+              dueDate:
+                type: string
+                format: date
+              amountCents:
+                type: integer
+              paidCents:
+                type: integer
+              status:
+                type: string
+                enum:
+                  - upcoming
+                  - overdue
+                  - partial
+                  - paid
+        payments:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - invoiceId
+              - patientId
+              - installmentId
+              - amountCents
+              - method
+              - reference
+              - notes
+              - paidAt
+            properties:
+              id:
+                type: integer
+              invoiceId:
+                type:
+                  - integer
+                  - "null"
+              patientId:
+                type: integer
+              installmentId:
+                type:
+                  - integer
+                  - "null"
+              amountCents:
+                type: integer
+              method:
+                type: string
+                enum:
+                  - cash
+                  - card
+                  - bank_transfer
+                  - other
+              reference:
+                type:
+                  - string
+                  - "null"
+              notes:
+                type:
+                  - string
+                  - "null"
+              paidAt:
+                type: string
+                format: date-time
+        correctionHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/FinanceCorrectionHistory"
+  securitySchemes:
+    staffSession:
+      type: http
+      scheme: bearer
+      bearerFormat: DentOzone staff session

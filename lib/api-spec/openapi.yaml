@@ -1,0 +1,3719 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: DentOzone clinic operations API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: clinic
+  - name: dashboard
+  - name: patients
+  - name: staff
+  - name: audit
+  - name: finance
+  - name: inventory
+  - name: appointments
+  - name: clinical
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /session:
+    get:
+      operationId: getSession
+      tags: [staff]
+      summary: Resolve the signed-in clinic staff member
+      responses:
+        "200":
+          description: Signed-in staff identity and clinic role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffSession"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Account is not authorized for this clinic
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get current clinic activity and financial totals
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /patients:
+    get:
+      operationId: getPatients
+      tags: [patients]
+      summary: Search and list clinic patients
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Patient records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      summary: Register a patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientInput"
+      responses:
+        "201":
+          description: Registered patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+  /patients/{patientId}:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: getPatient
+      tags: [patients]
+      summary: Get a patient profile
+      responses:
+        "200":
+          description: Patient profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          description: Patient not found
+    patch:
+      operationId: updatePatient
+      tags: [patients]
+      summary: Update patient details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientUpdate"
+      responses:
+        "200":
+          description: Updated patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+  /clinic-settings:
+    get:
+      operationId: getClinicSettings
+      tags: [clinic]
+      summary: Get clinic settings
+      responses:
+        "200":
+          description: Clinic settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClinicSettings"
+    patch:
+      operationId: updateClinicSettings
+      tags: [clinic]
+      summary: Update clinic settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClinicSettingsUpdate"
+      responses:
+        "200":
+          description: Updated clinic settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClinicSettings"
+  /staff:
+    get:
+      operationId: getStaff
+      tags: [staff]
+      summary: List clinic staff
+      responses:
+        "200":
+          description: Staff members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffMember"
+    post:
+      operationId: inviteStaff
+      tags: [staff]
+      summary: Invite a staff member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffInviteInput"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+  /staff/{staffId}:
+    parameters:
+      - in: path
+        name: staffId
+        required: true
+        schema: { type: integer }
+    patch:
+      operationId: updateStaff
+      tags: [staff]
+      summary: Change a staff member's role or status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffUpdate"
+      responses:
+        "200":
+          description: Updated staff member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+  /audit-log:
+    get:
+      operationId: getAuditLog
+      tags: [audit]
+      summary: List recent clinic audit events
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: Recent audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEvent"
+  /finance/invoices:
+    get:
+      operationId: listInvoices
+      tags: [finance]
+      summary: List patient invoices
+      parameters:
+        - in: query
+          name: patientId
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Patient invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+    post:
+      operationId: createInvoice
+      tags: [finance]
+      summary: Create a patient invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: Created invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+  /finance/patients:
+    get:
+      operationId: searchBillingPatients
+      tags: [finance]
+      summary: Find a patient by name or code for billing without exposing clinical records
+      parameters:
+        - in: query
+          name: search
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 80 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        "200":
+          description: Matching patient identities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BillingPatient"
+  /finance/invoices/{invoiceId}:
+    parameters:
+      - in: path
+        name: invoiceId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: getInvoice
+      tags: [finance]
+      summary: Get an invoice
+      responses:
+        "200":
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+  /finance/invoices/{invoiceId}/payments:
+    parameters:
+      - in: path
+        name: invoiceId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: recordPayment
+      tags: [finance]
+      summary: Record a payment against an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Recorded payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancePayment"
+  /finance/expenses:
+    get:
+      operationId: listExpenses
+      tags: [finance]
+      summary: List clinic expenses
+      responses:
+        "200":
+          description: Clinic expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [finance]
+      summary: Record a clinic expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "201":
+          description: Recorded expense
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+  /finance/expenses/{expenseId}:
+    parameters:
+      - in: path
+        name: expenseId
+        required: true
+        schema: { type: integer }
+    patch:
+      operationId: updateExpense
+      tags: [finance]
+      summary: Update a clinic expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdate"
+      responses:
+        "200":
+          description: Updated expense
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+  /finance/suppliers:
+    get:
+      operationId: listSuppliers
+      tags: [finance]
+      summary: List clinic suppliers
+      responses:
+        "200":
+          description: Clinic suppliers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Supplier"
+    post:
+      operationId: createSupplier
+      tags: [finance]
+      summary: Create a supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "201":
+          description: Created supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+  /finance/suppliers/{supplierId}:
+    parameters:
+      - in: path
+        name: supplierId
+        required: true
+        schema: { type: integer }
+    patch:
+      operationId: updateSupplier
+      tags: [finance]
+      summary: Update a supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierUpdate"
+      responses:
+        "200":
+          description: Updated supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+  /finance/report:
+    get:
+      operationId: getFinanceReport
+      tags: [finance]
+      summary: Get a finance report for a date range
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Finance report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceReport"
+  /inventory:
+    get:
+      operationId: listInventoryItems
+      tags: [inventory]
+      summary: List inventory items
+      responses:
+        "200":
+          description: Inventory items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryItem"
+    post:
+      operationId: createInventoryItem
+      tags: [inventory]
+      summary: Create an inventory item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryItemInput"
+      responses:
+        "201":
+          description: Created inventory item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+  /inventory/{itemId}:
+    parameters:
+      - in: path
+        name: itemId
+        required: true
+        schema: { type: integer }
+    patch:
+      operationId: updateInventoryItem
+      tags: [inventory]
+      summary: Update inventory item details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryItemUpdate"
+      responses:
+        "200":
+          description: Updated inventory item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+  /inventory/{itemId}/movements:
+    parameters:
+      - in: path
+        name: itemId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: listStockMovements
+      tags: [inventory]
+      summary: List inventory stock movements
+      responses:
+        "200":
+          description: Stock movements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockMovement"
+    post:
+      operationId: recordStockMovement
+      tags: [inventory]
+      summary: Record an inventory stock movement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockMovementInput"
+      responses:
+        "201":
+          description: Recorded stock movement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMovement"
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments in a time range
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date-time }
+        - in: query
+          name: doctorStaffId
+          schema: { type: integer }
+        - in: query
+          name: chair
+          schema: { type: string }
+      responses:
+        "200":
+          description: Appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Appointment" }
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Schedule an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppointmentInput" }
+      responses:
+        "201":
+          description: Scheduled appointment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+  /appointments/doctors:
+    get:
+      operationId: listAppointmentDoctors
+      tags: [appointments]
+      summary: List doctors available for appointments
+      responses:
+        "200":
+          description: Appointment doctors
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AppointmentDoctor" }
+  /appointments/{appointmentId}:
+    parameters:
+      - in: path
+        name: appointmentId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      summary: Get an appointment
+      responses:
+        "200":
+          description: Appointment details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppointmentUpdate" }
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+  /appointments/{appointmentId}/cancel:
+    parameters:
+      - in: path
+        name: appointmentId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: cancelAppointment
+      tags: [appointments]
+      summary: Cancel an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppointmentCancelInput" }
+      responses:
+        "200":
+          description: Cancelled appointment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Appointment" }
+  /patients/{patientId}/visits:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: listPatientVisits
+      tags: [clinical]
+      summary: List a patient's visits
+      responses:
+        "200":
+          description: Patient visits
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Visit" }
+    post:
+      operationId: createPatientVisit
+      tags: [clinical]
+      summary: Record a patient visit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VisitInput" }
+      responses:
+        "201":
+          description: Recorded visit
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Visit" }
+  /visits/{visitId}:
+    parameters:
+      - in: path
+        name: visitId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: getVisit
+      tags: [clinical]
+      summary: Get a visit
+      responses:
+        "200":
+          description: Visit details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Visit" }
+    patch:
+      operationId: updateVisit
+      tags: [clinical]
+      summary: Update a visit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VisitUpdate" }
+      responses:
+        "200":
+          description: Updated visit
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Visit" }
+  /visits/{visitId}/diagnoses:
+    parameters:
+      - in: path
+        name: visitId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: addVisitDiagnosis
+      tags: [clinical]
+      summary: Record a diagnosis for a visit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DiagnosisInput" }
+      responses:
+        "201":
+          description: Recorded diagnosis
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Diagnosis" }
+  /visits/{visitId}/procedures:
+    parameters:
+      - in: path
+        name: visitId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: addVisitProcedure
+      tags: [clinical]
+      summary: Record a procedure for a visit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProcedureInput" }
+      responses:
+        "201":
+          description: Recorded procedure
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Procedure" }
+  /patients/{patientId}/odontogram:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: listPatientOdontogram
+      tags: [clinical]
+      summary: Get a patient's odontogram findings
+      responses:
+        "200":
+          description: Tooth findings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ToothFinding" }
+    post:
+      operationId: createToothFinding
+      tags: [clinical]
+      summary: Record a tooth finding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ToothFindingInput" }
+      responses:
+        "201":
+          description: Recorded tooth finding
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToothFinding" }
+  /patients/{patientId}/treatment-plans:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: listPatientTreatmentPlans
+      tags: [clinical]
+      summary: List a patient's treatment plans
+      responses:
+        "200":
+          description: Patient treatment plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TreatmentPlan" }
+    post:
+      operationId: createTreatmentPlan
+      tags: [clinical]
+      summary: Create a treatment plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TreatmentPlanInput" }
+      responses:
+        "201":
+          description: Created treatment plan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TreatmentPlan" }
+  /treatment-plans/{planId}:
+    parameters:
+      - in: path
+        name: planId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: getTreatmentPlan
+      tags: [clinical]
+      summary: Get a treatment plan
+      responses:
+        "200":
+          description: Treatment plan details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TreatmentPlan" }
+    patch:
+      operationId: updateTreatmentPlan
+      tags: [clinical]
+      summary: Update a treatment plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TreatmentPlanUpdate" }
+      responses:
+        "200":
+          description: Updated treatment plan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TreatmentPlan" }
+  /treatment-plans/{planId}/items:
+    parameters:
+      - in: path
+        name: planId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: addTreatmentPlanItem
+      tags: [clinical]
+      summary: Add an item to a treatment plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TreatmentPlanItemInput" }
+      responses:
+        "201":
+          description: Added treatment plan item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TreatmentPlanItem" }
+  /treatment-plans/{planId}/items/{itemId}:
+    parameters:
+      - in: path
+        name: planId
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: itemId
+        required: true
+        schema: { type: integer }
+    patch:
+      operationId: updateTreatmentPlanItem
+      tags: [clinical]
+      summary: Update a treatment plan item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TreatmentPlanItemUpdate" }
+      responses:
+        "200":
+          description: Updated treatment plan item
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TreatmentPlanItem" }
+  /patients/{patientId}/documents:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: listPatientDocuments
+      tags: [patients]
+      summary: List a patient's document metadata
+      responses:
+        "200":
+          description: Patient documents; file bytes are stored in private object storage
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PatientDocument" }
+  /patients/{patientId}/documents/upload-request:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: requestPatientDocumentUpload
+      tags: [patients]
+      summary: Request a presigned upload URL for a patient document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentUploadInput" }
+      responses:
+        "201":
+          description: Presigned upload URL and pending document metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentUploadTicket" }
+  /patients/{patientId}/documents/{documentId}/complete:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: documentId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: completePatientDocumentUpload
+      tags: [patients]
+      summary: Verify uploaded bytes and activate a patient document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentCompleteInput" }
+      responses:
+        "200":
+          description: Verified and activated document metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PatientDocument" }
+  /patients/{patientId}/documents/{documentId}/file:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: documentId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: downloadPatientDocument
+      tags: [patients]
+      summary: Download a patient document by authenticated document ID
+      description: Requires patient-document authorization; returns bytes from private object storage, never from the database.
+      responses:
+        "200":
+          description: Authenticated document bytes
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "403":
+          description: Not authorized to access this document
+        "404":
+          description: Document not found or unavailable
+  /patients/{patientId}/documents/{documentId}:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: documentId
+        required: true
+        schema: { type: integer }
+    patch:
+      operationId: updatePatientDocumentStatus
+      tags: [patients]
+      summary: Update document status or withdraw consent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PatientDocumentStatusUpdate" }
+      responses:
+        "200":
+          description: Updated document metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PatientDocument" }
+  /patients/{patientId}/orthodontic-cases:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: listPatientOrthodonticCases
+      tags: [clinical]
+      summary: List a patient's orthodontic cases and progress
+      responses:
+        "200":
+          description: Orthodontic cases
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OrthodonticCase" }
+    post:
+      operationId: createOrthodonticCase
+      tags: [clinical]
+      summary: Create an orthodontic case
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrthodonticCaseInput" }
+      responses:
+        "201":
+          description: Created orthodontic case
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrthodonticCase" }
+  /orthodontic-cases/{caseId}:
+    parameters:
+      - in: path
+        name: caseId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: getOrthodonticCase
+      tags: [clinical]
+      summary: Get an orthodontic case and its progress
+      responses:
+        "200":
+          description: Orthodontic case
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrthodonticCase" }
+    patch:
+      operationId: updateOrthodonticCase
+      tags: [clinical]
+      summary: Update an orthodontic case
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrthodonticCaseUpdate" }
+      responses:
+        "200":
+          description: Updated orthodontic case
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrthodonticCase" }
+  /orthodontic-cases/{caseId}/progress:
+    parameters:
+      - in: path
+        name: caseId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: addOrthodonticCaseProgress
+      tags: [clinical]
+      summary: Record orthodontic case progress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrthodonticProgressInput" }
+      responses:
+        "201":
+          description: Recorded progress entry
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrthodonticProgress" }
+  /patients/{patientId}/reminder-preferences:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: getPatientReminderPreferences
+      tags: [patients]
+      summary: Get patient reminder preferences
+      responses:
+        "200":
+          description: Reminder preferences
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReminderPreferences" }
+    put:
+      operationId: setPatientReminderPreferences
+      tags: [patients]
+      summary: Set reminder opt-in and channel preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReminderPreferencesInput" }
+      responses:
+        "200":
+          description: Saved reminder preferences
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReminderPreferences" }
+  /reminder-templates:
+    get:
+      operationId: listReminderTemplates
+      tags: [clinic]
+      summary: List reminder templates
+      responses:
+        "200":
+          description: Reminder templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ReminderTemplate" }
+    post:
+      operationId: createReminderTemplate
+      tags: [clinic]
+      summary: Create a reminder template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReminderTemplateInput" }
+      responses:
+        "201":
+          description: Created reminder template
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReminderTemplate" }
+  /reminder-templates/{templateId}:
+    parameters:
+      - in: path
+        name: templateId
+        required: true
+        schema: { type: integer }
+    patch:
+      operationId: updateReminderTemplate
+      tags: [clinic]
+      summary: Update a reminder template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReminderTemplateUpdate" }
+      responses:
+        "200":
+          description: Updated reminder template
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReminderTemplate" }
+  /appointments/{appointmentId}/reminders:
+    parameters:
+      - in: path
+        name: appointmentId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: createAppointmentReminderDraft
+      tags: [appointments]
+      summary: Generate a reminder draft from a template
+      description: Creates a draft only; no message is sent by this endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReminderDraftInput" }
+      responses:
+        "201":
+          description: Draft reminder message
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reminder" }
+  /reminders:
+    get:
+      operationId: listReminders
+      tags: [clinic]
+      summary: List reminders and manual-send status
+      parameters:
+        - in: query
+          name: patientId
+          schema: { type: integer }
+        - in: query
+          name: appointmentId
+          schema: { type: integer }
+        - in: query
+          name: status
+          schema: { type: string, enum: [draft, staff_confirmed_sent, cancelled] }
+      responses:
+        "200":
+          description: Reminder records; sent status means staff-confirmed manual send, not provider-verified delivery
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Reminder" }
+  /reminders/{reminderId}/mark-sent:
+    parameters:
+      - in: path
+        name: reminderId
+        required: true
+        schema: { type: integer }
+    post:
+      operationId: markReminderSent
+      tags: [clinic]
+      summary: Confirm that staff manually sent a reminder
+      description: Records staff attestation only; it is not provider-verified delivery.
+      responses:
+        "200":
+          description: Reminder marked staff-confirmed sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Reminder" }
+  /clinic/reports:
+    get:
+      operationId: getClinicOperationalReport
+      tags: [clinic]
+      summary: Get operational counts for a date range
+      description: Counts only; this report contains no monetary values.
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Operational activity counts for the inclusive date range
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClinicOperationalReport" }
+  /patients/{patientId}/laboratory-orders:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+    get:
+      operationId: listPatientLaboratoryOrders
+      summary: List laboratory orders for a patient
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Laboratory orders and their audit histories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LaboratoryOrder"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createPatientLaboratoryOrder
+      summary: Create a laboratory order
+      description: Owner and dentist roles only. isDemo is inherited from the patient.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaboratoryOrderInput"
+      responses:
+        "201":
+          description: Created order including its first audit event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaboratoryOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /laboratory-orders/{orderId}:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      operationId: getLaboratoryOrder
+      summary: Get a laboratory order with audit history
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Laboratory order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaboratoryOrder"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateLaboratoryOrder
+      summary: Update a laboratory order
+      description: Owner and dentist roles only; valid status transitions are enforced.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaboratoryOrderUpdate"
+      responses:
+        "200":
+          description: Updated order and appended audit history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaboratoryOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      operationId: cancelLaboratoryOrder
+      summary: Cancel a laboratory order without deleting its audit history
+      description: Owner and dentist roles only. Cancellation is retained as a terminal order state.
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Cancelled order and appended audit history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaboratoryOrder"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /patients/{patientId}/aligner-courses:
+    parameters:
+      - $ref: "#/components/parameters/AlignerPatientId"
+    get:
+      operationId: listPatientAlignerCourses
+      summary: List aligner courses belonging to a patient
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Courses and their trays, ordered by course creation and tray sequence.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlignerCourse"
+        "400":
+          $ref: "#/components/responses/AlignerBadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/AlignerForbidden"
+        "404":
+          $ref: "#/components/responses/AlignerNotFound"
+    post:
+      operationId: createPatientAlignerCourse
+      summary: Start a Clear Aligner course linked to the patient's orthodontic case
+      description: Owner or assigned dentist only. Case and patient must match; one course per case.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlignerCourseInput"
+      responses:
+        "201":
+          description: Created course.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignerCourse"
+        "400":
+          $ref: "#/components/responses/AlignerBadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/AlignerForbidden"
+        "404":
+          $ref: "#/components/responses/AlignerNotFound"
+        "409":
+          $ref: "#/components/responses/AlignerConflict"
+  /patients/{patientId}/aligner-courses/{courseId}:
+    parameters:
+      - $ref: "#/components/parameters/AlignerPatientId"
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      operationId: getPatientAlignerCourse
+      summary: Read a patient's aligner course and trays
+      security:
+        - staffSession: []
+      responses:
+        "200":
+          description: Course details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignerCourse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/AlignerForbidden"
+        "404":
+          $ref: "#/components/responses/AlignerNotFound"
+  /patients/{patientId}/aligner-courses/{courseId}/trays:
+    parameters:
+      - $ref: "#/components/parameters/AlignerPatientId"
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    post:
+      operationId: createAlignerTray
+      summary: Add a uniquely sequenced tray to a course
+      description: Owner or assigned dentist only. An optional visit must belong to the same patient.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlignerTrayInput"
+      responses:
+        "201":
+          description: Created tray.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignerTray"
+        "400":
+          $ref: "#/components/responses/AlignerBadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/AlignerForbidden"
+        "404":
+          $ref: "#/components/responses/AlignerNotFound"
+        "409":
+          $ref: "#/components/responses/AlignerConflict"
+  /patients/{patientId}/aligner-courses/{courseId}/trays/{trayId}:
+    parameters:
+      - $ref: "#/components/parameters/AlignerPatientId"
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      - name: trayId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    patch:
+      operationId: updateAlignerTray
+      summary: Update tray dates, status, wear notes, or linked visit
+      description: Owner or assigned dentist only. A supplied visit must belong to the same patient.
+      security:
+        - staffSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlignerTrayUpdate"
+      responses:
+        "200":
+          description: Updated tray.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignerTray"
+        "400":
+          $ref: "#/components/responses/AlignerBadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/AlignerForbidden"
+        "404":
+          $ref: "#/components/responses/AlignerNotFound"
+        "409":
+          $ref: "#/components/responses/AlignerConflict"
+  /patients/{patientId}/prescriptions:
+    parameters:
+      - name: patientId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      operationId: listPatientPrescriptions
+      summary: List prescriptions for one patient
+      description: >
+        Readable by owner, dentist, manager, and assistant. Reception and accountant roles are denied.
+        A prescription is listed only through its owning patient.
+      responses:
+        "200":
+          description: Patient prescriptions, including original data and amendments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Prescription"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrescriptionError"
+        "403":
+          $ref: "#/components/responses/PrescriptionForbidden"
+        "404":
+          $ref: "#/components/responses/PrescriptionNotFound"
+      security:
+        - staffSession: []
+    post:
+      operationId: createPatientPrescription
+      summary: Issue a prescription
+      description: >
+        Owner and dentist only. The linked visit, when supplied, must belong to this patient. A
+        dentist is the prescribing author; a dentist user is automatically recorded as author. An
+        owner must select an active dentist using authorDentistStaffId. isDemo is inherited from the
+        patient and cannot be set by the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionInput"
+      responses:
+        "201":
+          description: Prescription issued and audit event recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "400":
+          $ref: "#/components/responses/PrescriptionBadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrescriptionError"
+        "403":
+          $ref: "#/components/responses/PrescriptionForbidden"
+        "404":
+          $ref: "#/components/responses/PrescriptionNotFound"
+        "409":
+          description: Patient is inactive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrescriptionError"
+      security:
+        - staffSession: []
+  /prescriptions/{prescriptionId}:
+    parameters:
+      - name: prescriptionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      operationId: getPrescription
+      summary: Read one prescription with its complete amendment history
+      description: Readable by owner, dentist, manager, and assistant only.
+      responses:
+        "200":
+          description: Prescription detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrescriptionError"
+        "403":
+          $ref: "#/components/responses/PrescriptionForbidden"
+        "404":
+          $ref: "#/components/responses/PrescriptionNotFound"
+      security:
+        - staffSession: []
+  /prescriptions/{prescriptionId}/amendments:
+    parameters:
+      - name: prescriptionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    post:
+      operationId: amendPrescription
+      summary: Append a correction or void amendment
+      description: >
+        Owner and dentist only. The issued record is never edited or deleted. Corrections and voids
+        append an immutable amendment and audit event. A voided prescription cannot be amended again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionAmendmentInput"
+      responses:
+        "201":
+          description: Updated effective view with preserved original and append-only amendments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "400":
+          $ref: "#/components/responses/PrescriptionBadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrescriptionError"
+        "403":
+          $ref: "#/components/responses/PrescriptionForbidden"
+        "404":
+          $ref: "#/components/responses/PrescriptionNotFound"
+        "409":
+          description: A void prescription cannot be amended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrescriptionError"
+      security:
+        - staffSession: []
+  /clinic/marketing/campaigns:
+    get:
+      summary: List marketing campaigns
+      description: Owner and manager only.
+      responses:
+        "200":
+          description: Campaign records; no patient-level data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campaign"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingError"
+        "403":
+          $ref: "#/components/responses/MarketingForbidden"
+      operationId: listMarketingCampaigns
+      security:
+        - staffSession: []
+    post:
+      summary: Create a campaign
+      description: Code is the referral-source identifier. Its normalized value is unique.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignInput"
+      responses:
+        "201":
+          description: Created campaign.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "400":
+          $ref: "#/components/responses/MarketingBadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingError"
+        "403":
+          $ref: "#/components/responses/MarketingForbidden"
+        "409":
+          description: A campaign with the normalized code already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingError"
+      operationId: createMarketingCampaign
+      security:
+        - staffSession: []
+  /clinic/marketing/campaigns/{campaignId}:
+    patch:
+      summary: Update a campaign
+      description: Owner and manager only. Changes are audited.
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignPatch"
+      responses:
+        "200":
+          description: Updated campaign.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "400":
+          $ref: "#/components/responses/MarketingBadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingError"
+        "403":
+          $ref: "#/components/responses/MarketingForbidden"
+        "404":
+          description: Campaign not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingError"
+      operationId: updateMarketingCampaign
+      security:
+        - staffSession: []
+  /clinic/marketing/campaigns/{campaignId}/disable:
+    post:
+      summary: Disable a campaign
+      description: Soft-disables the campaign and preserves its history. Owner and manager only; action is
+        audited.
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      responses:
+        "200":
+          description: Disabled campaign.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingError"
+        "403":
+          $ref: "#/components/responses/MarketingForbidden"
+        "404":
+          description: Campaign not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingError"
+      operationId: disableMarketingCampaign
+      security:
+        - staffSession: []
+  /clinic/marketing/report:
+    get:
+      summary: Get aggregate referral reporting
+      description: Counts normalized patient referralSource values by campaign code and unmatched source.
+        Never returns patient identifiers or row-level data.
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Inclusive patient registration date in the clinic timezone. Must be paired with to.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Inclusive patient registration date in the clinic timezone. Must be paired with from.
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Aggregate-only report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingReport"
+        "400":
+          $ref: "#/components/responses/MarketingBadRequest"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketingError"
+        "403":
+          $ref: "#/components/responses/MarketingForbidden"
+      operationId: getMarketingReport
+      security:
+        - staffSession: []
+  /finance/invoices/{invoiceId}/void:
+    post:
+      summary: Void an unpaid invoice when no active payments remain
+      description: >
+        Owner, manager, or accountant only. Requires a reason of 8-1000 characters. The invoice and
+        its line items remain untouched. A void marker and immutable before/after snapshot are
+        recorded in the clinic audit log. Voided invoices reject future payments and are omitted from
+        finance report totals.
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceCorrectionInput"
+      responses:
+        "200":
+          description: Invoice DTO including append-only correction history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "400":
+          description: Invalid invoice id or reason
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role is not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already voided or invoice has active payments / nonzero paid balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: voidInvoice
+      security:
+        - staffSession: []
+  /finance/payments/{paymentId}/void:
+    post:
+      summary: Reverse a payment without deleting or editing it
+      description: >
+        Owner, manager, or accountant only. Locks the invoice row and reverses the exact payment
+        amount from invoice and associated installment balances in one transaction. The payment row
+        remains unchanged; the reason and immutable before/after payment, invoice, and installment
+        snapshots are written to the clinic audit log. Repeated reversals conflict. Reversed payments
+        are omitted from finance revenue reports and remain visible in invoice correction history.
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinanceCorrectionInput"
+      responses:
+        "200":
+          description: Invoice DTO including append-only correction history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "400":
+          description: Invalid payment id or reason
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Role is not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already reversed or inconsistent balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      operationId: reversePayment
+      security:
+        - staffSession: []
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    StaffRole:
+      type: string
+      enum: [owner, dentist, reception, assistant, accountant, manager]
+    StaffStatus:
+      type: string
+      enum: [invited, active, suspended]
+    StaffSession:
+      type: object
+      required: [id, email, name, role, status]
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        name: { type: string }
+        role: { $ref: "#/components/schemas/StaffRole" }
+        status: { $ref: "#/components/schemas/StaffStatus" }
+    StaffMember:
+      allOf:
+        - $ref: "#/components/schemas/StaffSession"
+        - type: object
+          required: [createdAt]
+          properties:
+            createdAt: { type: string, format: date-time }
+    StaffInviteInput:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email }
+        name: { type: string }
+        role: { $ref: "#/components/schemas/StaffRole" }
+    StaffUpdate:
+      type: object
+      properties:
+        role: { $ref: "#/components/schemas/StaffRole" }
+        status: { $ref: "#/components/schemas/StaffStatus" }
+        name: { type: string }
+    Patient:
+      type: object
+      required: [id, patientCode, fullName, gender, phone, status, registrationDate]
+      properties:
+        id: { type: integer }
+        patientCode: { type: string }
+        fullName: { type: string }
+        gender: { type: string, enum: [female, male, other, undisclosed] }
+        dateOfBirth: { type: ["string", "null"], format: date }
+        phone: { type: string }
+        whatsapp: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        address: { type: ["string", "null"] }
+        emergencyContact: { type: ["string", "null"] }
+        occupation: { type: ["string", "null"] }
+        referralSource: { type: ["string", "null"] }
+        status: { type: string, enum: [active, inactive, archived] }
+        registrationDate: { type: string, format: date-time }
+        allergies: { type: ["string", "null"] }
+        medications: { type: ["string", "null"] }
+        medicalConditions: { type: ["string", "null"] }
+        previousSurgeries: { type: ["string", "null"] }
+        diabetes: { type: boolean }
+        hypertension: { type: boolean }
+        heartDisease: { type: boolean }
+        bleedingDisorders: { type: boolean }
+        pregnancy: { type: boolean }
+        smoking: { type: boolean }
+        previousDentalTreatment: { type: ["string", "null"] }
+        previousOrthodonticTreatment: { type: ["string", "null"] }
+        oralHygiene: { type: ["string", "null"] }
+        dentalComplaints: { type: ["string", "null"] }
+        previousDentist: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        isDemo: { type: boolean }
+    PatientInput:
+      type: object
+      required: [fullName, gender, phone]
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 180 }
+        gender: { type: string, enum: [female, male, other, undisclosed] }
+        dateOfBirth: { type: ["string", "null"], format: date }
+        phone: { type: string, minLength: 7, maxLength: 24 }
+        whatsapp: { type: ["string", "null"] }
+        email: { type: ["string", "null"], format: email }
+        address: { type: ["string", "null"] }
+        emergencyContact: { type: ["string", "null"] }
+        occupation: { type: ["string", "null"] }
+        referralSource: { type: ["string", "null"] }
+        allergies: { type: ["string", "null"] }
+        medications: { type: ["string", "null"] }
+        medicalConditions: { type: ["string", "null"] }
+        previousSurgeries: { type: ["string", "null"] }
+        diabetes: { type: boolean, default: false }
+        hypertension: { type: boolean, default: false }
+        heartDisease: { type: boolean, default: false }
+        bleedingDisorders: { type: boolean, default: false }
+        pregnancy: { type: boolean, default: false }
+        smoking: { type: boolean, default: false }
+        previousDentalTreatment: { type: ["string", "null"] }
+        previousOrthodonticTreatment: { type: ["string", "null"] }
+        oralHygiene: { type: ["string", "null"] }
+        dentalComplaints: { type: ["string", "null"] }
+        previousDentist: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+    PatientUpdate:
+      type: object
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 180 }
+        gender: { type: string, enum: [female, male, other, undisclosed] }
+        dateOfBirth: { type: ["string", "null"], format: date }
+        phone: { type: string, minLength: 7, maxLength: 24 }
+        whatsapp: { type: ["string", "null"] }
+        email: { type: ["string", "null"], format: email }
+        address: { type: ["string", "null"] }
+        emergencyContact: { type: ["string", "null"] }
+        occupation: { type: ["string", "null"] }
+        referralSource: { type: ["string", "null"] }
+        status: { type: string, enum: [active, inactive, archived] }
+        allergies: { type: ["string", "null"] }
+        medications: { type: ["string", "null"] }
+        medicalConditions: { type: ["string", "null"] }
+        previousSurgeries: { type: ["string", "null"] }
+        diabetes: { type: boolean }
+        hypertension: { type: boolean }
+        heartDisease: { type: boolean }
+        bleedingDisorders: { type: boolean }
+        pregnancy: { type: boolean }
+        smoking: { type: boolean }
+        previousDentalTreatment: { type: ["string", "null"] }
+        previousOrthodonticTreatment: { type: ["string", "null"] }
+        oralHygiene: { type: ["string", "null"] }
+        dentalComplaints: { type: ["string", "null"] }
+        previousDentist: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+    AppointmentPreview:
+      type: object
+      required: [id, patientName, doctorName, startsAt, endsAt, status, treatment]
+      properties:
+        id: { type: integer }
+        patientName: { type: string }
+        doctorName: { type: string }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        status: { type: string }
+        treatment: { type: string }
+    DashboardSummary:
+      type: object
+      required: [todayAppointments, todayPatients, todayRevenue, todayExpenses, netRevenue, outstandingPayments, newPatients, returningPatients, cancelledAppointments, noShows, pendingFollowUps, appointments]
+      properties:
+        todayAppointments: { type: integer }
+        todayPatients: { type: integer }
+        todayRevenue: { type: ["number", "null"] }
+        todayExpenses: { type: ["number", "null"] }
+        netRevenue: { type: ["number", "null"] }
+        outstandingPayments: { type: ["number", "null"] }
+        newPatients: { type: integer }
+        returningPatients: { type: integer }
+        cancelledAppointments: { type: integer }
+        noShows: { type: integer }
+        pendingFollowUps: { type: integer }
+        appointments:
+          type: array
+          items: { $ref: "#/components/schemas/AppointmentPreview" }
+    ClinicSettings:
+      type: object
+      required: [id, clinicName, address, phone, currency, language, timezone]
+      properties:
+        id: { type: integer }
+        clinicName: { type: string }
+        address: { type: string }
+        phone: { type: string }
+        whatsapp: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        currency: { type: string }
+        language: { type: string, enum: [en, ar] }
+        timezone: { type: string }
+        updatedAt: { type: string, format: date-time }
+    ClinicSettingsUpdate:
+      type: object
+      properties:
+        clinicName: { type: string, minLength: 2 }
+        address: { type: string }
+        phone: { type: string }
+        whatsapp: { type: ["string", "null"] }
+        email: { type: ["string", "null"], format: email }
+        language: { type: string, enum: [en, ar] }
+    AuditEvent:
+      type: object
+      required: [id, actorName, action, entityType, createdAt]
+      properties:
+        id: { type: integer }
+        actorName: { type: string }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: ["integer", "null"] }
+        summary: { type: string }
+        createdAt: { type: string, format: date-time }
+    BillingPatient:
+      type: object
+      required: [id, patientCode, fullName]
+      properties:
+        id: { type: integer }
+        patientCode: { type: string }
+        fullName: { type: string }
+    Invoice:
+      type: object
+      required: [id, patientId, patientName, totalCents, paidCents, balanceCents, status, issuedAt, dueDate, notes, items, installments, payments, correctionHistory]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        patientName: { type: string }
+        totalCents: { type: integer, minimum: 0 }
+        paidCents: { type: integer, minimum: 0 }
+        balanceCents: { type: integer, minimum: 0 }
+        status: { type: string, enum: [unpaid, partial, paid] }
+        issuedAt: { type: string, format: date-time }
+        dueDate: { type: ["string", "null"], format: date }
+        notes: { type: ["string", "null"] }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/InvoiceLine" }
+        installments:
+          type: array
+          items: { $ref: "#/components/schemas/Installment" }
+        payments:
+          type: array
+          items: { $ref: "#/components/schemas/FinancePayment" }
+        correctionHistory:
+          type: array
+          items: { $ref: "#/components/schemas/FinanceCorrectionHistory" }
+    InvoiceLine:
+      type: object
+      required: [id, description, quantity, unitPriceCents, totalCents]
+      properties:
+        id: { type: integer }
+        description: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitPriceCents: { type: integer, minimum: 0 }
+        totalCents: { type: integer, minimum: 0 }
+    Installment:
+      type: object
+      required: [id, dueDate, amountCents, paidCents, status]
+      properties:
+        id: { type: integer }
+        dueDate: { type: string, format: date }
+        amountCents: { type: integer, minimum: 1 }
+        paidCents: { type: integer, minimum: 0 }
+        status: { type: string, enum: [upcoming, overdue, partial, paid] }
+    FinancePayment:
+      type: object
+      required: [id, invoiceId, patientId, installmentId, amountCents, method, reference, notes, paidAt]
+      properties:
+        id: { type: integer }
+        invoiceId: { type: ["integer", "null"] }
+        patientId: { type: integer }
+        installmentId: { type: ["integer", "null"] }
+        amountCents: { type: integer, minimum: 1 }
+        method: { type: string, enum: [cash, card, bank_transfer, other] }
+        reference: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        paidAt: { type: string, format: date-time }
+    InvoiceInput:
+      type: object
+      required: [patientId, items]
+      properties:
+        patientId: { type: integer }
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/InvoiceLineInput" }
+        installments:
+          type: array
+          items: { $ref: "#/components/schemas/InstallmentInput" }
+        dueDate: { type: ["string", "null"], format: date }
+        notes: { type: ["string", "null"] }
+    InvoiceLineInput:
+      type: object
+      required: [description, quantity, unitPriceCents]
+      properties:
+        description: { type: string, minLength: 1 }
+        quantity: { type: integer, minimum: 1 }
+        unitPriceCents: { type: integer, minimum: 0 }
+    InstallmentInput:
+      type: object
+      required: [dueDate, amountCents]
+      properties:
+        dueDate: { type: string, format: date }
+        amountCents: { type: integer, minimum: 1 }
+    PaymentInput:
+      type: object
+      required: [amountCents, method]
+      properties:
+        amountCents: { type: integer, minimum: 1 }
+        method: { type: string, enum: [cash, card, bank_transfer, other] }
+        installmentId: { type: ["integer", "null"] }
+        reference: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+    Expense:
+      type: object
+      required: [id, category, amountCents, supplierId, supplierName, notes, occurredAt]
+      properties:
+        id: { type: integer }
+        category: { type: string }
+        amountCents: { type: integer, minimum: 1 }
+        supplierId: { type: ["integer", "null"] }
+        supplierName: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        occurredAt: { type: string, format: date-time }
+    ExpenseInput:
+      type: object
+      required: [category, amountCents]
+      properties:
+        category: { type: string, minLength: 1 }
+        amountCents: { type: integer, minimum: 1 }
+        supplierId: { type: ["integer", "null"] }
+        notes: { type: ["string", "null"] }
+        occurredAt: { type: string, format: date-time }
+    ExpenseUpdate:
+      type: object
+      properties:
+        category: { type: string, minLength: 1 }
+        amountCents: { type: integer, minimum: 1 }
+        supplierId: { type: ["integer", "null"] }
+        notes: { type: ["string", "null"] }
+        occurredAt: { type: string, format: date-time }
+    Supplier:
+      type: object
+      required: [id, name, phone, email, notes, active]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"], format: email }
+        notes: { type: ["string", "null"] }
+        active: { type: boolean }
+    SupplierInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+        phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"], format: email }
+        notes: { type: ["string", "null"] }
+    SupplierUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        phone: { type: ["string", "null"] }
+        email: { type: ["string", "null"], format: email }
+        notes: { type: ["string", "null"] }
+        active: { type: boolean }
+    InventoryItem:
+      type: object
+      required: [id, name, sku, unit, quantityOnHand, reorderLevel, unitCostCents, supplierId, supplierName, active, lowStock]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        sku: { type: string }
+        unit: { type: string }
+        quantityOnHand: { type: integer }
+        reorderLevel: { type: integer, minimum: 0 }
+        unitCostCents: { type: ["integer", "null"], minimum: 0 }
+        supplierId: { type: ["integer", "null"] }
+        supplierName: { type: ["string", "null"] }
+        active: { type: boolean }
+        lowStock: { type: boolean }
+    InventoryItemInput:
+      type: object
+      required: [name, sku, unit, reorderLevel]
+      properties:
+        name: { type: string, minLength: 1 }
+        sku: { type: string, minLength: 1 }
+        unit: { type: string, minLength: 1 }
+        reorderLevel: { type: integer, minimum: 0 }
+        unitCostCents: { type: ["integer", "null"], minimum: 0 }
+        supplierId: { type: ["integer", "null"] }
+    InventoryItemUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        sku: { type: string, minLength: 1 }
+        unit: { type: string, minLength: 1 }
+        reorderLevel: { type: integer, minimum: 0 }
+        unitCostCents: { type: ["integer", "null"], minimum: 0 }
+        supplierId: { type: ["integer", "null"] }
+        active: { type: boolean }
+    StockMovement:
+      type: object
+      required: [id, itemId, delta, reason, note, staffName, occurredAt]
+      properties:
+        id: { type: integer }
+        itemId: { type: integer }
+        delta: { type: integer, not: { const: 0 } }
+        reason: { type: string, enum: [receive, consume, adjust] }
+        note: { type: ["string", "null"] }
+        staffName: { type: string }
+        occurredAt: { type: string, format: date-time }
+    StockMovementInput:
+      type: object
+      required: [delta, reason]
+      properties:
+        delta: { type: integer, not: { const: 0 } }
+        reason: { type: string, enum: [receive, consume, adjust] }
+        note: { type: ["string", "null"] }
+    FinanceReport:
+      type: object
+      required: [from, to, revenueCents, expenseCents, netCents, outstandingCents, overdueCents, invoiceCount, unpaidInvoiceCount, days, categories, methods]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        revenueCents: { type: integer }
+        expenseCents: { type: integer }
+        netCents: { type: integer }
+        outstandingCents: { type: integer }
+        overdueCents: { type: integer }
+        invoiceCount: { type: integer, minimum: 0 }
+        unpaidInvoiceCount: { type: integer, minimum: 0 }
+        days:
+          type: array
+          items: { $ref: "#/components/schemas/FinanceDay" }
+        categories:
+          type: array
+          items: { $ref: "#/components/schemas/FinanceCategory" }
+        methods:
+          type: array
+          items: { $ref: "#/components/schemas/FinanceMethod" }
+    FinanceDay:
+      type: object
+      required: [date, revenueCents, expenseCents]
+      properties:
+        date: { type: string, format: date }
+        revenueCents: { type: integer }
+        expenseCents: { type: integer }
+    FinanceCategory:
+      type: object
+      required: [category, amountCents]
+      properties:
+        category: { type: string }
+        amountCents: { type: integer }
+    FinanceMethod:
+      type: object
+      required: [method, amountCents]
+      properties:
+        method: { type: string, enum: [cash, card, bank_transfer, other] }
+        amountCents: { type: integer }
+    Appointment:
+      type: object
+      required: [id, patientId, patientName, patientCode, doctorStaffId, doctorName, chair, startsAt, endsAt, status, treatment, notes, cancelReason, cancelledAt, isDemo]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        patientName: { type: string }
+        patientCode: { type: string }
+        doctorStaffId: { type: ["integer", "null"] }
+        doctorName: { type: string }
+        chair: { type: ["string", "null"] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        status: { type: string, enum: [scheduled, confirmed, arrived, completed, no_show, cancelled] }
+        treatment: { type: string }
+        notes: { type: ["string", "null"] }
+        cancelReason: { type: ["string", "null"] }
+        cancelledAt: { type: ["string", "null"], format: date-time }
+        isDemo: { type: boolean }
+    AppointmentInput:
+      type: object
+      required: [patientId, doctorStaffId, startsAt, endsAt, treatment]
+      properties:
+        patientId: { type: integer }
+        doctorStaffId: { type: integer }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        treatment: { type: string }
+        chair: { type: string }
+        notes: { type: string }
+    AppointmentUpdate:
+      type: object
+      properties:
+        doctorStaffId: { type: ["integer", "null"] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        chair: { type: ["string", "null"] }
+        treatment: { type: string }
+        notes: { type: ["string", "null"] }
+        status: { type: string, enum: [scheduled, confirmed, arrived, completed, no_show, cancelled] }
+    AppointmentCancelInput:
+      type: object
+      properties:
+        reason: { type: string }
+    AppointmentDoctor:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+    Visit:
+      type: object
+      required: [id, patientId, patientName, appointmentId, doctorStaffId, doctorName, status, complaint, notes, occurredAt, createdAt, updatedAt, isDemo, diagnoses, procedures]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        patientName: { type: string }
+        appointmentId: { type: ["integer", "null"] }
+        doctorStaffId: { type: integer }
+        doctorName: { type: string }
+        status: { type: string, enum: [draft, completed] }
+        complaint: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        occurredAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        isDemo: { type: boolean }
+        diagnoses:
+          type: array
+          items: { $ref: "#/components/schemas/Diagnosis" }
+        procedures:
+          type: array
+          items: { $ref: "#/components/schemas/Procedure" }
+    VisitInput:
+      type: object
+      properties:
+        appointmentId: { type: integer }
+        complaint: { type: string }
+        notes: { type: string }
+    VisitUpdate:
+      type: object
+      properties:
+        complaint: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        status: { type: string, enum: [draft, completed] }
+    Diagnosis:
+      type: object
+      required: [id, visitId, label, code, toothCode, notes, recordedAt, recordedByName]
+      properties:
+        id: { type: integer }
+        visitId: { type: integer }
+        label: { type: string }
+        code: { type: ["string", "null"] }
+        toothCode: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        recordedAt: { type: string, format: date-time }
+        recordedByName: { type: string }
+    DiagnosisInput:
+      type: object
+      required: [label]
+      properties:
+        label: { type: string }
+        code: { type: ["string", "null"] }
+        toothCode: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+    Procedure:
+      type: object
+      required: [id, visitId, label, toothCode, notes, recordedAt, recordedByName]
+      properties:
+        id: { type: integer }
+        visitId: { type: integer }
+        label: { type: string }
+        toothCode: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        recordedAt: { type: string, format: date-time }
+        recordedByName: { type: string }
+    ProcedureInput:
+      type: object
+      required: [label]
+      properties:
+        label: { type: string }
+        toothCode: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+    ToothFinding:
+      type: object
+      required: [id, patientId, dentition, toothCode, condition, surfaces, notes, recordedAt, recordedByName]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        dentition: { type: string, enum: [adult, child] }
+        toothCode: { type: string }
+        condition: { type: string, enum: [healthy, caries, filled, crown, missing, root_canal, implant, extraction_needed, unerupted, other] }
+        surfaces:
+          type: array
+          items: { type: string }
+        notes: { type: ["string", "null"] }
+        recordedAt: { type: string, format: date-time }
+        recordedByName: { type: string }
+    ToothFindingInput:
+      type: object
+      required: [dentition, toothCode, condition]
+      properties:
+        dentition: { type: string, enum: [adult, child] }
+        toothCode: { type: string }
+        condition: { type: string, enum: [healthy, caries, filled, crown, missing, root_canal, implant, extraction_needed, unerupted, other] }
+        surfaces:
+          type: array
+          items: { type: string }
+        notes: { type: ["string", "null"] }
+    TreatmentPlan:
+      type: object
+      required: [id, patientId, patientName, title, goal, status, createdByName, createdAt, updatedAt, isDemo, items]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        patientName: { type: string }
+        title: { type: string }
+        goal: { type: ["string", "null"] }
+        status: { type: string, enum: [draft, active, completed, cancelled] }
+        createdByName: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        isDemo: { type: boolean }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TreatmentPlanItem" }
+    TreatmentPlanInput:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        goal: { type: ["string", "null"] }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TreatmentPlanItemInput" }
+    TreatmentPlanUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        goal: { type: ["string", "null"] }
+        status: { type: string, enum: [draft, active, completed, cancelled] }
+    TreatmentPlanItem:
+      type: object
+      required: [id, planId, description, toothCode, priority, status, notes]
+      properties:
+        id: { type: integer }
+        planId: { type: integer }
+        description: { type: string }
+        toothCode: { type: ["string", "null"] }
+        priority: { type: integer, minimum: 1, maximum: 3 }
+        status: { type: string, enum: [pending, in_progress, completed] }
+        notes: { type: ["string", "null"] }
+    TreatmentPlanItemInput:
+      type: object
+      required: [description]
+      properties:
+        description: { type: string }
+        toothCode: { type: ["string", "null"] }
+        priority: { type: integer, minimum: 1, maximum: 3 }
+        notes: { type: ["string", "null"] }
+    TreatmentPlanItemUpdate:
+      type: object
+      properties:
+        description: { type: string }
+        toothCode: { type: ["string", "null"] }
+        priority: { type: integer, minimum: 1, maximum: 3 }
+        status: { type: string, enum: [pending, in_progress, completed] }
+        notes: { type: ["string", "null"] }
+    PatientDocument:
+      type: object
+      required: [id, patientId, kind, filename, contentType, sizeBytes, objectKey, status, createdByStaffId, createdAt, updatedAt, isDemo]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        visitId: { type: ["integer", "null"] }
+        kind: { type: string, enum: [consent, form, photo, xray, other] }
+        filename: { type: string, maxLength: 255, description: Safe display filename; never a filesystem path. }
+        contentType: { type: string, enum: [application/pdf, image/jpeg, image/png, image/webp] }
+        sizeBytes: { type: integer, minimum: 1 }
+        objectKey: { type: string, description: Private protected object-storage key; never a public URL. }
+        status: { type: string, enum: [pending, active, withdrawn] }
+        signedAt: { type: ["string", "null"], format: date-time }
+        createdByStaffId: { type: integer }
+        updatedByStaffId: { type: ["integer", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        isDemo: { type: boolean }
+    DocumentUploadInput:
+      type: object
+      required: [kind, filename, contentType, sizeBytes]
+      properties:
+        visitId: { type: ["integer", "null"] }
+        kind: { type: string, enum: [consent, form, photo, xray, other] }
+        filename: { type: string, maxLength: 255, description: Safe display filename; paths are rejected. }
+        contentType: { type: string, enum: [application/pdf, image/jpeg, image/png, image/webp] }
+        sizeBytes: { type: integer, minimum: 1 }
+        signedAt: { type: ["string", "null"], format: date-time }
+    DocumentUploadTicket:
+      type: object
+      required: [uploadURL, document]
+      properties:
+        uploadURL: { type: string, format: uri }
+        document: { $ref: "#/components/schemas/PatientDocument" }
+    DocumentCompleteInput:
+      type: object
+      description: The server verifies the uploaded object's actual size and content type against the pending metadata before activation.
+      properties:
+        checksumSha256: { type: string, pattern: "^[A-Fa-f0-9]{64}$" }
+    PatientDocumentStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [active, withdrawn] }
+    OrthodonticCase:
+      type: object
+      required: [id, patientId, title, goal, appliance, doctorStaffId, status, createdAt, updatedAt, isDemo, progress]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        title: { type: string }
+        goal: { type: string }
+        appliance: { type: string }
+        doctorStaffId: { type: integer }
+        status: { type: string, enum: [active, paused, completed] }
+        nextReviewAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        isDemo: { type: boolean }
+        progress:
+          type: array
+          items: { $ref: "#/components/schemas/OrthodonticProgress" }
+    OrthodonticCaseInput:
+      type: object
+      required: [title, goal, appliance, doctorStaffId]
+      properties:
+        title: { type: string }
+        goal: { type: string }
+        appliance: { type: string }
+        doctorStaffId: { type: integer }
+        status: { type: string, enum: [active, paused, completed] }
+        nextReviewAt: { type: ["string", "null"], format: date-time }
+    OrthodonticCaseUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        goal: { type: string }
+        appliance: { type: string }
+        doctorStaffId: { type: integer }
+        status: { type: string, enum: [active, paused, completed] }
+        nextReviewAt: { type: ["string", "null"], format: date-time }
+    OrthodonticProgress:
+      type: object
+      required: [id, caseId, note, phase, authorStaffId, recordedAt, isDemo]
+      properties:
+        id: { type: integer }
+        caseId: { type: integer }
+        note: { type: string }
+        phase: { type: string }
+        visitId: { type: ["integer", "null"] }
+        nextReviewAt: { type: ["string", "null"], format: date-time }
+        authorStaffId: { type: integer }
+        recordedAt: { type: string, format: date-time }
+        isDemo: { type: boolean }
+    OrthodonticProgressInput:
+      type: object
+      required: [note, phase]
+      properties:
+        note: { type: string }
+        phase: { type: string }
+        visitId: { type: ["integer", "null"] }
+        nextReviewAt: { type: ["string", "null"], format: date-time }
+    ReminderPreferences:
+      type: object
+      required: [patientId, optIn, channel, consentRecordedAt, updatedAt, isDemo]
+      properties:
+        patientId: { type: integer }
+        optIn: { type: boolean }
+        channel: { type: string, enum: [whatsapp, sms, email] }
+        consentRecordedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        isDemo: { type: boolean }
+    ReminderPreferencesInput:
+      type: object
+      required: [optIn, channel]
+      properties:
+        optIn: { type: boolean }
+        channel: { type: string, enum: [whatsapp, sms, email] }
+        consentRecordedAt: { type: string, format: date-time, description: Required when recording or renewing opt-in consent; set by server when omitted. }
+    ReminderTemplate:
+      type: object
+      required: [id, title, bodyEn, bodyAr, channel, active, createdAt, updatedAt, isDemo]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        bodyEn: { type: string }
+        bodyAr: { type: string }
+        channel: { type: string, enum: [whatsapp, sms, email] }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        isDemo: { type: boolean }
+    ReminderTemplateInput:
+      type: object
+      required: [title, bodyEn, bodyAr, channel]
+      properties:
+        title: { type: string }
+        bodyEn: { type: string }
+        bodyAr: { type: string }
+        channel: { type: string, enum: [whatsapp, sms, email] }
+        active: { type: boolean, default: true }
+    ReminderTemplateUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        bodyEn: { type: string }
+        bodyAr: { type: string }
+        channel: { type: string, enum: [whatsapp, sms, email] }
+        active: { type: boolean }
+    ReminderDraftInput:
+      type: object
+      required: [templateId]
+      properties:
+        templateId: { type: integer }
+    Reminder:
+      type: object
+      required: [id, patientId, appointmentId, templateId, renderedMessage, channel, status, createdByStaffId, createdAt, isDemo]
+      properties:
+        id: { type: integer }
+        patientId: { type: integer }
+        appointmentId: { type: integer }
+        templateId: { type: integer }
+        renderedMessage: { type: string }
+        channel: { type: string, enum: [whatsapp, sms, email] }
+        status: { type: string, enum: [draft, staff_confirmed_sent, cancelled] }
+        createdByStaffId: { type: integer }
+        createdAt: { type: string, format: date-time }
+        sentByStaffId: { type: ["integer", "null"] }
+        sentAt: { type: ["string", "null"], format: date-time }
+        isDemo: { type: boolean }
+    AppointmentStatusCount:
+      type: object
+      required: [status, count]
+      properties:
+        status: { type: string }
+        count: { type: integer, minimum: 0 }
+    ClinicOperationalReport:
+      type: object
+      required: [from, to, appointmentsByStatus, newPatients, visits, procedures, documents, orthodonticCases, optedInPatients, manuallySentReminders]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        appointmentsByStatus:
+          type: array
+          items: { $ref: "#/components/schemas/AppointmentStatusCount" }
+        newPatients: { type: integer, minimum: 0 }
+        visits: { type: integer, minimum: 0 }
+        procedures: { type: integer, minimum: 0 }
+        documents: { type: integer, minimum: 0 }
+        orthodonticCases: { type: integer, minimum: 0 }
+        optedInPatients: { type: integer, minimum: 0 }
+        manuallySentReminders: { type: integer, minimum: 0 }
+    LaboratoryCaseType:
+      type: string
+      enum:
+        - crown
+        - bridge
+        - denture
+        - implant
+        - orthodontic
+        - other
+    LaboratoryOrderStatus:
+      type: string
+      enum:
+        - submitted
+        - in_progress
+        - ready
+        - delivered
+        - cancelled
+    LaboratoryOrder:
+      type: object
+      required:
+        - id
+        - patientId
+        - visitId
+        - labName
+        - supplierId
+        - caseType
+        - dueDate
+        - status
+        - notes
+        - createdByStaffId
+        - updatedByStaffId
+        - createdAt
+        - updatedAt
+        - isDemo
+        - history
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        visitId:
+          type:
+            - integer
+            - "null"
+        labName:
+          type: string
+        supplierId:
+          type:
+            - integer
+            - "null"
+        caseType:
+          $ref: "#/components/schemas/LaboratoryCaseType"
+        dueDate:
+          type:
+            - string
+            - "null"
+          format: date
+        status:
+          $ref: "#/components/schemas/LaboratoryOrderStatus"
+        notes:
+          type:
+            - string
+            - "null"
+        createdByStaffId:
+          type: integer
+        updatedByStaffId:
+          type:
+            - integer
+            - "null"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        isDemo:
+          type: boolean
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/LaboratoryOrderAuditEvent"
+    LaboratoryOrderAuditEvent:
+      type: object
+      required:
+        - id
+        - orderId
+        - actorStaffId
+        - actorName
+        - action
+        - before
+        - after
+        - occurredAt
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        actorStaffId:
+          type: integer
+        actorName:
+          type: string
+        action:
+          type: string
+          enum:
+            - create
+            - update
+            - cancel
+        before:
+          type:
+            - object
+            - "null"
+          additionalProperties: true
+        after:
+          type: object
+          additionalProperties: true
+        occurredAt:
+          type: string
+          format: date-time
+    LaboratoryOrderInput:
+      type: object
+      additionalProperties: false
+      required:
+        - labName
+        - caseType
+      properties:
+        visitId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        labName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        supplierId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        caseType:
+          $ref: "#/components/schemas/LaboratoryCaseType"
+        dueDate:
+          type:
+            - string
+            - "null"
+          format: date
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 10000
+    LaboratoryOrderUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        visitId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        labName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        supplierId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+        caseType:
+          $ref: "#/components/schemas/LaboratoryCaseType"
+        dueDate:
+          type:
+            - string
+            - "null"
+          format: date
+        status:
+          $ref: "#/components/schemas/LaboratoryOrderStatus"
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 10000
+    CalendarDate:
+      type: string
+      format: date
+    TrayStatus:
+      type: string
+      enum:
+        - planned
+        - delivered
+        - wearing
+        - completed
+        - paused
+    AlignerCourse:
+      type: object
+      required:
+        - id
+        - patientId
+        - caseId
+        - title
+        - createdByStaffId
+        - createdAt
+        - updatedAt
+        - isDemo
+        - trays
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        caseId:
+          type: integer
+        title:
+          type: string
+        createdByStaffId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        isDemo:
+          type: boolean
+        trays:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlignerTray"
+    AlignerTray:
+      type: object
+      required:
+        - id
+        - courseId
+        - sequence
+        - plannedDate
+        - deliveredDate
+        - status
+        - wearNotes
+        - visitId
+        - createdAt
+        - updatedAt
+        - isDemo
+      properties:
+        id:
+          type: integer
+        courseId:
+          type: integer
+        sequence:
+          type: integer
+          minimum: 1
+        plannedDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        deliveredDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        status:
+          $ref: "#/components/schemas/TrayStatus"
+        wearNotes:
+          type:
+            - string
+            - "null"
+        visitId:
+          type:
+            - integer
+            - "null"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        isDemo:
+          type: boolean
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    AlignerCourseInput:
+      type: object
+      additionalProperties: false
+      required:
+        - caseId
+        - title
+      properties:
+        caseId:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+    AlignerTrayUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        plannedDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        deliveredDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        status:
+          $ref: "#/components/schemas/TrayStatus"
+        wearNotes:
+          type:
+            - string
+            - "null"
+          maxLength: 4000
+        visitId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+    AlignerTrayInput:
+      type: object
+      additionalProperties: false
+      required:
+        - sequence
+      properties:
+        sequence:
+          type: integer
+          minimum: 1
+        plannedDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        deliveredDate:
+          anyOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        status:
+          $ref: "#/components/schemas/TrayStatus"
+        wearNotes:
+          type:
+            - string
+            - "null"
+          maxLength: 4000
+        visitId:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+    PrescriptionFields:
+      type: object
+      required:
+        - medication
+        - dose
+        - route
+        - frequency
+        - duration
+        - instructions
+      properties:
+        medication:
+          type: string
+          minLength: 1
+          maxLength: 200
+        dose:
+          type: string
+          minLength: 1
+          maxLength: 120
+        route:
+          type: string
+          minLength: 1
+          maxLength: 80
+        frequency:
+          type: string
+          minLength: 1
+          maxLength: 120
+        duration:
+          type: string
+          minLength: 1
+          maxLength: 120
+        instructions:
+          type: string
+          maxLength: 2000
+    Prescription:
+      allOf:
+        - $ref: "#/components/schemas/PrescriptionFields"
+        - type: object
+          required:
+            - id
+            - patientId
+            - patientName
+            - authorDentistStaffId
+            - authorDentistName
+            - issuedDate
+            - original
+            - status
+            - isDemo
+            - amendments
+          properties:
+            id:
+              type: integer
+            patientId:
+              type: integer
+            patientName:
+              type: string
+            visitId:
+              type:
+                - integer
+                - "null"
+            authorDentistStaffId:
+              type: integer
+            authorDentistName:
+              type: string
+            createdByStaffId:
+              type: integer
+            issuedDate:
+              type: string
+              format: date
+            createdAt:
+              type: string
+              format: date-time
+            isDemo:
+              type: boolean
+              description: Inherited from the owning patient; never supplied by a caller.
+            original:
+              $ref: "#/components/schemas/PrescriptionFields"
+            status:
+              type: string
+              enum:
+                - issued
+                - corrected
+                - void
+            amendments:
+              type: array
+              items:
+                type: object
+                required:
+                  - id
+                  - amendmentType
+                  - reason
+                  - amendedByStaffId
+                  - amendedByName
+                  - createdAt
+                properties:
+                  id:
+                    type: integer
+                  amendmentType:
+                    type: string
+                    enum:
+                      - correction
+                      - void
+                  reason:
+                    type: string
+                  amendedByStaffId:
+                    type: integer
+                  amendedByName:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  replacement:
+                    oneOf:
+                      - $ref: "#/components/schemas/PrescriptionFields"
+                      - type: "null"
+    PrescriptionError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    PrescriptionInput:
+      allOf:
+        - $ref: "#/components/schemas/PrescriptionFields"
+        - type: object
+          required:
+            - issuedDate
+          properties:
+            visitId:
+              type: integer
+              minimum: 1
+            authorDentistStaffId:
+              type: integer
+              minimum: 1
+              description: Required for owner-authored requests; must identify active dentist staff.
+            issuedDate:
+              type: string
+              format: date
+    PrescriptionAmendmentInput:
+      oneOf:
+        - type: object
+          required:
+            - amendmentType
+            - reason
+            - replacement
+          properties:
+            amendmentType:
+              const: correction
+            reason:
+              type: string
+              minLength: 3
+              maxLength: 1000
+            replacement:
+              $ref: "#/components/schemas/PrescriptionFields"
+        - type: object
+          required:
+            - amendmentType
+            - reason
+          properties:
+            amendmentType:
+              const: void
+            reason:
+              type: string
+              minLength: 3
+              maxLength: 1000
+    CampaignInput:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - channel
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Campaign code or source identifier matched against normalized referralSource.
+        channel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        startDate:
+          type:
+            - string
+            - "null"
+          format: date
+        endDate:
+          type:
+            - string
+            - "null"
+          format: date
+        status:
+          type: string
+          enum:
+            - active
+            - paused
+            - ended
+    CampaignPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: Supply one or more campaign fields. Disabled status is set only through the disable operation.
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 120
+        channel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        startDate:
+          type:
+            - string
+            - "null"
+          format: date
+        endDate:
+          type:
+            - string
+            - "null"
+          format: date
+        status:
+          type: string
+          enum:
+            - active
+            - paused
+            - ended
+    Campaign:
+      type: object
+      required:
+        - id
+        - code
+        - channel
+        - startDate
+        - endDate
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        channel:
+          type: string
+        startDate:
+          type:
+            - string
+            - "null"
+          format: date
+        endDate:
+          type:
+            - string
+            - "null"
+          format: date
+        status:
+          type: string
+          enum:
+            - active
+            - paused
+            - ended
+            - disabled
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MarketingReport:
+      type: object
+      required:
+        - campaigns
+        - unattributedSources
+        - totalReferrals
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        campaigns:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/Campaign"
+              - type: object
+                required:
+                  - referrals
+                properties:
+                  referrals:
+                    type: integer
+                    minimum: 0
+        unattributedSources:
+          type: array
+          items:
+            type: object
+            required:
+              - source
+              - referrals
+            properties:
+              source:
+                type: string
+                description: Uppercase trimmed referral-source label, not a patient identifier.
+              referrals:
+                type: integer
+                minimum: 0
+        totalReferrals:
+          type: integer
+          minimum: 0
+    MarketingError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    FinanceCorrectionHistory:
+      type: object
+      required:
+        - id
+        - entityType
+        - entityId
+        - action
+        - reason
+        - before
+        - after
+        - actorName
+        - createdAt
+      properties:
+        id:
+          type: integer
+        entityType:
+          type: string
+          enum:
+            - invoice
+            - payment
+        entityId:
+          type: integer
+        action:
+          type: string
+          enum:
+            - void
+        reason:
+          type: string
+        before:
+          type: object
+          additionalProperties: true
+        after:
+          type: object
+          additionalProperties: true
+        actorName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    FinanceCorrectionInput:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 1000
+  securitySchemes:
+    staffSession:
+      type: http
+      scheme: bearer
+      bearerFormat: DentOzone staff session
+  parameters:
+    PatientId:
+      name: patientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    AlignerPatientId:
+      name: patientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    CampaignId:
+      name: campaignId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  responses:
+    BadRequest:
+      description: Invalid input or status transition
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: The staff role is not permitted
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Patient, visit, supplier, or order not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Visit ownership conflict, inactive patient, or invalid lifecycle operation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    AlignerBadRequest:
+      description: Invalid input or mismatched patient relationship.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    AlignerForbidden:
+      description: Role or assigned-case ownership does not permit this action.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    AlignerNotFound:
+      description: Patient, course, case, visit, or tray was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    AlignerConflict:
+      description: Patient is inactive or sequence/course constraint conflicts.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    PrescriptionBadRequest:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PrescriptionError"
+    PrescriptionForbidden:
+      description: Staff role is not permitted
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PrescriptionError"
+    PrescriptionNotFound:
+      description: Patient, visit, or prescription was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PrescriptionError"
+    MarketingBadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MarketingError"
+    MarketingForbidden:
+      description: Role is not authorized; only clinic owners and managers can use these endpoints.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MarketingError"

@@ -1,0 +1,14 @@
+{$APP_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy app:8080
+}
+
+{$AUTH_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy keycloak:8080
+}
+
+# The bucket is private; only time-limited signed object URLs can read/write it.
+{$STORAGE_DOMAIN} {
+  reverse_proxy minio:9000
+}

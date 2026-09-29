@@ -1,0 +1,6 @@
+- [Clerk registry compatibility](clerk-registry-compatibility.md) — check available Clerk releases and React peer ranges before pinning frontend dependencies.
+- [Managed workflow port collisions](workflow-port-collisions.md) — a failed restart can coexist with an older live server; confirm stale listeners before restarting.
+- [Clerk synthetic login testing](clerk-synthetic-login-testing.md) — overridden test login claims may not match Clerk's verified user email, so invited staff stay inactive.
+- [Finance patient lookup boundary](finance-patient-lookup.md) — billing staff need patient identifiers without access to clinical profiles.
+- [Private document immutability](private-document-immutability.md) — a signed upload URL remains valid after activation; seal verified bytes under a separate key.
+- [Scheduling test isolation](scheduling-test-isolation.md) — unique fixture staff are insufficient when chair names and Cairo-local time slots can collide across test runs.

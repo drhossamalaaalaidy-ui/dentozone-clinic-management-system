@@ -1,0 +1,46 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import { requireStaff } from "../middlewares/clinicStaff";
+import patientsRouter from "./clinicPatients";
+import staffRouter from "./clinicStaff";
+import settingsRouter from "./clinicSettings";
+import dashboardRouter from "./clinicDashboard";
+import auditRouter from "./clinicAudit";
+import financeRouter from "./clinicFinance";
+import inventoryRouter from "./clinicInventory";
+import appointmentsRouter from "./clinicAppointments";
+import visitsRouter from "./clinicVisits";
+import carePlansRouter from "./clinicCarePlans";
+import documentsRouter from "./clinicDocuments";
+import orthodonticsRouter from "./clinicOrthodontics";
+import remindersRouter from "./clinicReminders";
+import reportsRouter from "./clinicReports";
+import laboratoryRouter from "./clinicLaboratory";
+import alignersRouter from "./clinicAligners";
+import prescriptionsRouter from "./clinicPrescriptions";
+import marketingRouter from "./clinicMarketing";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use(requireStaff);
+router.use(staffRouter);
+router.use(patientsRouter);
+router.use(settingsRouter);
+router.use(dashboardRouter);
+router.use(auditRouter);
+router.use(financeRouter);
+router.use(inventoryRouter);
+router.use(appointmentsRouter);
+router.use(visitsRouter);
+router.use(carePlansRouter);
+router.use(documentsRouter);
+router.use(orthodonticsRouter);
+router.use(remindersRouter);
+router.use(reportsRouter);
+router.use(laboratoryRouter);
+router.use(alignersRouter);
+router.use(prescriptionsRouter);
+router.use(marketingRouter);
+
+export default router;

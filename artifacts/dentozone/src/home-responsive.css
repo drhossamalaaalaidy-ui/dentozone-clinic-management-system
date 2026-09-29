@@ -1,0 +1,17 @@
+@media (max-width: 370px) {
+  header:has([data-testid="button-home-language"]) {
+    flex-wrap: wrap;
+    row-gap: 12px;
+    padding-inline: 16px !important;
+  }
+
+  header:has([data-testid="button-home-language"]) > div:last-child {
+    margin-inline-start: auto;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .home-hero {
+    padding-inline: 16px !important;
+  }
+}

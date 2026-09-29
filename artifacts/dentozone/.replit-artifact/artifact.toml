@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "DentOzone Clinic System"
+description = "A bilingual Arabic and English dental clinic operations system for DentOzone in New Cairo, beginning with secure staff access, patient records, clinic settings, and a mobile-friendly dashboard backed by persistent data."
+version = "1.0.0"
+id = "artifacts/dentozone"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23664
+
+[services.development]
+run = "pnpm --filter @workspace/dentozone run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/dentozone", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/dentozone/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23664"
+BASE_PATH = "/"
